@@ -1,4 +1,3 @@
-// Add this at the very top
 console.log('Content script loaded!');
 
 // Store processed email IDs to prevent duplicate processing
