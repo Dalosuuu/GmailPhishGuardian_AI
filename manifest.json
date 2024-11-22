@@ -2,9 +2,8 @@
   "manifest_version": 3,
   "name": "Gmail Data Extractor",
   "version": "1.0",
-  "description": "Extracts email data from Gmail with improved accuracy",
+  "description": "Extracts email data from Gmail.",
   "permissions": [
-    "activeTab",
     "scripting",
     "storage"
   ],
@@ -14,7 +13,8 @@
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
   "background": {

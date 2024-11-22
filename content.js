@@ -1,102 +1,27 @@
-// Add this at the top of content.js
+// Add this at the very top
 console.log('Content script loaded!');
 
 // Store processed email IDs to prevent duplicate processing
 const processedEmails = new Set();
+const processedEmailsWithTimestamp = new Map();
 
 // Helper function to clean text content
 function cleanText(text) {
+    if (!text) return '';
     return text
         .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
         .replace(/[\n\r\t]/g, ' ')  // Replace newlines and tabs with space
         .trim();  // Remove leading/trailing whitespace
 }
 
-// Helper function to get email ID from URL or content
-function getEmailId(emailContainer) {
-    // Try to get from URL first
-    const urlMatch = window.location.href.match(/\#message-([a-zA-Z0-9]+)/);
+// Helper function to get email ID from URL
+function getEmailId() {
+    const urlMatch = window.location.href.match(/#(?:inbox\/)?(?:[^\/]+\/)?([a-zA-Z0-9]+)$/);
     if (urlMatch) return urlMatch[1];
-    
-    // Fallback to timestamp + subject as unique identifier
-    const timestamp = emailContainer.querySelector('.g3').getAttribute('title') || '';
-    const subject = emailContainer.querySelector('h2.hP').textContent || '';
-    return `${timestamp}-${subject}`;
+    return `email-${Date.now()}`;
 }
 
-// Function to extract email data
-function extractEmailData() {
-    console.log('Attempting to extract email data...');
-    
-    // Get the main email container
-    const emailContainer = document.querySelector('.gs');
-    
-    if (!emailContainer) {
-        console.log('No email container found');
-        return null;
-    }
-
-    // Get email ID and check if already processed
-    const emailId = getEmailId(emailContainer);
-    console.log('Found email ID:', emailId);
-
-    if (processedEmails.has(emailId)) {
-        console.log('Email already processed, skipping:', emailId);
-        return null;
-    }
-
-    try {
-        // Extract sender information
-        const senderElement = emailContainer.querySelector('.gD');
-        const sender = senderElement ? senderElement.getAttribute('email') : null;
-        console.log('Found sender:', sender);
-        
-        // Extract subject
-        const subjectElement = document.querySelector('h2.hP');
-        const subject = subjectElement ? cleanText(subjectElement.textContent) : null;
-        console.log('Found subject:', subject);
-        
-        // Extract email body
-        const bodyElement = emailContainer.querySelector('.a3s.aiL');
-        const body = bodyElement ? extractStructuredBody(bodyElement) : null;
-        console.log('Found body:', body ? 'Yes' : 'No');
-        
-        // Extract timestamp
-        const timestampElement = emailContainer.querySelector('.g3');
-        const timestamp = timestampElement ? timestampElement.getAttribute('title') : null;
-        console.log('Found timestamp:', timestamp);
-
-        if (sender || subject || body) {
-            processedEmails.add(emailId);
-            const emailData = {
-                id: emailId,
-                sender,
-                subject,
-                body,
-                timestamp,
-                extractedAt: new Date().toISOString()
-            };
-
-            console.log('Successfully extracted email data:', emailData);
-            
-            // Add this to test message passing
-            chrome.runtime.sendMessage({
-                type: 'EMAIL_EXTRACTED',
-                data: emailData
-            }, response => {
-                console.log('Message sent to background script, response:', response);
-            });
-
-            return emailData;
-        }
-    } catch (error) {
-        console.error('Error extracting email data:', error);
-    }
-    
-    return null;
-}
-
-// Helper function to extract structured body content
+// Function to extract structured body content
 function extractStructuredBody(bodyElement) {
     if (!bodyElement) return null;
 
@@ -114,60 +39,150 @@ function extractStructuredBody(bodyElement) {
                 text: cleanText(a.textContent),
                 href: a.href
             }))
-            .filter(link => link.text && link.href),
-        // Add any other structured elements you want to extract
+            .filter(link => link.text && link.href)
     };
 
     return structuredContent;
 }
 
-// Initialize the observer with debouncing
-function initializeExtraction() {
-    let debounceTimeout;
+// Function to validate email data
+function validateEmailData(emailData) {
+    if (!emailData.id) {
+        console.log('Missing email ID');
+        return false;
+    }
     
-    const observer = new MutationObserver((mutations) => {
-        // Clear existing timeout
-        if (debounceTimeout) {
-            clearTimeout(debounceTimeout);
+    if (!emailData.sender && !emailData.subject && !emailData.body) {
+        console.log('No valid content found');
+        return false;
+    }
+    
+    if (emailData.body && emailData.body.mainText.length < 10) {
+        console.log('Body text too short, might be incomplete');
+        return false;
+    }
+    
+    console.log('Email data validation passed');
+    return true;
+}
+
+// Function to extract email data
+function extractEmailData(attempts = 0) {
+    console.log('Attempting to extract email data...', window.location.href);
+    
+    const emailContainer = document.querySelector('.gs');
+    if (!emailContainer) {
+        if (attempts < 5) {
+            console.log('Email container not found, retrying in 1000ms...');
+            setTimeout(() => extractEmailData(attempts + 1), 1000);
+        } else {
+            console.log('Email container not found after multiple attempts.');
+        }
+        return;
+    }
+
+    // Get email ID and check if already processed
+    const emailId = getEmailId();
+    console.log('Processing email ID:', emailId);
+    
+    if (processedEmails.has(emailId)) {
+        console.log('Email already processed:', emailId);
+        return;
+    }
+
+    try {
+        // Extract sender (using email attribute)
+        const senderElement = emailContainer.querySelector('.gD');
+        const sender = senderElement ? senderElement.getAttribute('email') : null;
+        console.log('Found sender:', sender);
+
+        // Extract subject
+        const subjectElement = document.querySelector('h2.hP');
+        const subject = subjectElement ? cleanText(subjectElement.textContent) : null;
+        console.log('Found subject:', subject);
+
+        // Extract body
+        const bodyElement = emailContainer.querySelector('.a3s.aiL');
+        const body = bodyElement ? extractStructuredBody(bodyElement) : null;
+        console.log('Found body:', body ? `Yes (length: ${body.mainText.length})` : 'No');
+
+        // Extract timestamp
+        const timestampElement = emailContainer.querySelector('.g3');
+        const timestamp = timestampElement ? timestampElement.getAttribute('title') : new Date().toISOString();
+
+        const emailData = {
+            id: emailId,
+            sender,
+            subject,
+            body,
+            timestamp
+        };
+
+        // Validate data
+        if (!validateEmailData(emailData)) {
+            console.log('Email data validation failed.');
+            return;
         }
 
-        // Set new timeout
-        debounceTimeout = setTimeout(() => {
-            // Check if we're actually viewing an email
-            if (window.location.href.includes('#message')) {
-                const emailData = extractEmailData();
-                if (emailData) {
-                    // Here you can send the data to your analysis function
-                    // or to a backend server
-                    chrome.runtime.sendMessage({
-                        type: 'EMAIL_EXTRACTED',
-                        data: emailData
-                    });
-                }
+        // Add to processed set before sending
+        processedEmails.add(emailId);
+        processedEmailsWithTimestamp.set(emailId, Date.now());
+
+        console.log('Sending email data to background script:', emailData);
+        
+        chrome.runtime.sendMessage({
+            type: 'EMAIL_EXTRACTED',
+            data: emailData
+        }, response => {
+            console.log('Background script response:', response);
+        });
+
+    } catch (error) {
+        console.error('Error extracting email:', error);
+    }
+}
+
+// Initialize the observer with dynamic content detection
+function initializeExtraction() {
+    console.log('Initializing extraction...');
+
+    const observer = new MutationObserver((mutations) => {
+        // Check if we're on an email view
+        if (window.location.href.includes('#inbox/') || window.location.href.includes('#sent/')) {
+            const emailContainer = document.querySelector('.gs');
+            if (emailContainer && !processedEmails.has(getEmailId())) {
+                console.log('Detected new email content, attempting extraction...');
+                setTimeout(extractEmailData, 500); // Small delay to ensure DOM is ready
             }
-        }, 500); // 500ms debounce delay
+        }
     });
 
-    // Start observing changes in the Gmail interface
     observer.observe(document.body, {
         childList: true,
         subtree: true
     });
 
-    // Cleanup function
-    return () => {
-        observer.disconnect();
-        if (debounceTimeout) {
-            clearTimeout(debounceTimeout);
-        }
-    };
+    // Initial check in case we're already on an email
+    if (window.location.href.includes('#inbox/') || window.location.href.includes('#sent/')) {
+        setTimeout(extractEmailData, 1000);
+    }
+
+    console.log('Observer initialized');
 }
 
 // Initialize when the page loads
 initializeExtraction();
 
-// Clean up processed emails periodically (optional)
+// Clean up processed emails periodically
 setInterval(() => {
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
-    processedEmails.clear(); // Clear all after an hour
-}, 60 * 60 * 1000); // Run every hour 
+    
+    // Clean up old entries
+    for (const [emailId, timestamp] of processedEmailsWithTimestamp) {
+        if (timestamp < oneHourAgo) {
+            processedEmailsWithTimestamp.delete(emailId);
+            processedEmails.delete(emailId);
+            console.log('Cleaned up email ID from processed list:', emailId);
+        }
+    }
+}, 10 * 60 * 1000); // Run every 10 minutes
