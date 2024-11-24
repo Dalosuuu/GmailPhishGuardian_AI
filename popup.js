@@ -35,4 +35,47 @@ Body: ${emailData.body.mainText}
     } else {
         document.getElementById('emailDetails').textContent = 'No email data available.';
     }
-}); 
+});
+
+// Add event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Add click handlers for toggle and tooltip
+    document.querySelector('.toggle').addEventListener('click', toggleDetails);
+    document.querySelector('.help-icon').addEventListener('click', toggleTooltip);
+
+    const themeToggle = document.getElementById('themeToggle');
+    
+    // Set initial theme
+    document.documentElement.setAttribute('data-theme', 
+        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    );
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+    });
+});
+
+// Toggle details function
+function toggleDetails() {
+    const details = document.getElementById('emailDetails');
+    const toggleText = document.querySelector('.toggle span');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (details.style.display === 'block' || details.style.display === '') {
+        details.style.display = 'none';
+        toggleText.textContent = 'Show Email Details';
+        toggleIcon.style.transform = 'rotate(0deg)';
+    } else {
+        details.style.display = 'block';
+        toggleText.textContent = 'Hide Email Details';
+        toggleIcon.style.transform = 'rotate(180deg)';
+    }
+}
+
+// Toggle tooltip function
+function toggleTooltip() {
+    const tooltip = document.getElementById('tooltip');
+    tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
+} 

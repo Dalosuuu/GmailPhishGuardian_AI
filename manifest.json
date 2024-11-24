@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Gmail Data Extractor",
-  "version": "1.0",
-  "description": "Extracts email data from Gmail.",
+  "version": "1.1",
+  "description": "Extracts email data from Gmail and calculates phishing score.",
+  "icons": {
+    "16": "icons/phishing-graphic-originalsize-16x16.png",
+    "32": "icons/phishing-graphic-originalsize-32x32.png",
+    "48": "icons/phishing-graphic-originalsize-48x48.png",
+    "128": "icons/phishing-graphic-originalsize-128x128.png"
+  },
   "permissions": [
     "scripting",
     "storage"
@@ -18,9 +24,22 @@
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
-    "default_popup": "popup.html"
-  }
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/phishing-graphic-originalsize-16x16.png",
+      "32": "icons/phishing-graphic-originalsize-32x32.png",
+      "48": "icons/phishing-graphic-originalsize-48x48.png",
+      "128": "icons/phishing-graphic-originalsize-128x128.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["phishing.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 } 

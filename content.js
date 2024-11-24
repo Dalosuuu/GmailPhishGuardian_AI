@@ -111,10 +111,10 @@ function extractEmailData(attempts = 0) {
 
         const emailData = {
             id: emailId,
-            sender,
-            subject,
-            body,
-            timestamp
+            sender: sender,
+            subject: subject,
+            body: body,
+            timestamp: timestamp
         };
 
         // Validate data
