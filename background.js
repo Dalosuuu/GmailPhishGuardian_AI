@@ -46,6 +46,17 @@ async function handleMessage(message, sender) {
                     lastExtractedEmail = message.data;
                     extractedEmails.set(message.data.id, message.data);
 
+                    // Notify popup about the new data
+                    chrome.runtime.sendMessage({
+                        type: 'DATA_UPDATED',
+                        data: message.data
+                    }).catch(err => {
+                        // Ignore errors when popup is not open
+                        if (!err.message.includes('receiving end does not exist')) {
+                            console.error('Error sending update:', err);
+                        }
+                    });
+
                     return { 
                         status: 'received', 
                         success: true,

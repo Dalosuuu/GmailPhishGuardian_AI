@@ -1,7 +1,20 @@
 // Request latest data from background script
 chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL' }, response => {
     if (response && response.data) {
-        const emailData = response.data;
+        updatePopupContent(response.data);
+    }
+});
+
+// Listen for updates from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'DATA_UPDATED') {
+        updatePopupContent(message.data);
+    }
+});
+
+// Function to update popup content
+function updatePopupContent(emailData) {
+    if (emailData) {
         const phishingScore = emailData.phishingScore || 'N/A';
 
         // Update the phishing score text
@@ -9,6 +22,7 @@ chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL' }, response => {
         scoreElement.textContent = `Phishing Score: ${phishingScore}`;
 
         // Determine severity and update the class
+        scoreElement.className = 'score'; // Reset classes
         if (phishingScore !== 'N/A') {
             const score = parseInt(phishingScore);
             if (score < 30) {
@@ -19,7 +33,7 @@ chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL' }, response => {
                 scoreElement.classList.add('danger');
             }
         } else {
-            scoreElement.classList.add('caution'); // Default to caution if score not available
+            scoreElement.classList.add('caution');
         }
 
         // Update other elements
@@ -35,7 +49,7 @@ Body: ${emailData.body.mainText}
     } else {
         document.getElementById('emailDetails').textContent = 'No email data available.';
     }
-});
+}
 
 // Add event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
