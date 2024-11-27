@@ -11,7 +11,8 @@
   },
   "permissions": [
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://mail.google.com/*"
@@ -19,7 +20,7 @@
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
-      "js": ["content.js"],
+      "js": ["content.js", "popup.js"],
       "run_at": "document_idle"
     }
   ],

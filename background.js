@@ -21,6 +21,12 @@ function notifyPopup(message) {
     });
 }
 
+// Add this helper function
+async function getCurrentTabUrl() {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs[0]?.url || '';
+}
+
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Background script received message:', message.type);
@@ -71,12 +77,20 @@ async function handleMessage(message, sender) {
                 }
                 throw new Error('Invalid email data');
                 
-            case 'GET_LAST_EMAIL':
-                console.log('Popup requested last email data:', lastExtractedEmail ? 'has data' : 'no data');
-                return { 
-                    data: lastExtractedEmail,
-                    totalExtracted: extractedEmails.size
-                };
+            case 'GET_LAST_EMAIL_FOR_TAB':
+                const currentUrl = await getCurrentTabUrl();
+                const urlMatch = currentUrl.match(/#(?:inbox\/)?(?:[^\/]+\/)?([a-zA-Z0-9]+)$/);
+                const currentEmailId = urlMatch ? urlMatch[1] : null;
+                
+                console.log('Current URL:', currentUrl);
+                console.log('Current Email ID:', currentEmailId);
+                console.log('Last Extracted Email ID:', lastExtractedEmail?.id);
+
+                // Only return data if IDs match
+                if (currentEmailId && lastExtractedEmail && currentEmailId === lastExtractedEmail.id) {
+                    return { data: lastExtractedEmail };
+                }
+                return { data: null };
 
             default:
                 throw new Error('Unknown message type');

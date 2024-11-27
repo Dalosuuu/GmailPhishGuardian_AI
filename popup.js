@@ -1,11 +1,16 @@
-// Request latest data from background script
-chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL' }, response => {
+// When popup opens, it immediately requests the latest data
+chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL_FOR_TAB' }, response => {
     if (response && response.data) {
         updatePopupContent(response.data);
+    } else {
+        // Show loading state
+        document.getElementById('MainSubject').textContent = 'Analyzing current email...';
+        document.getElementById('phishingScore').textContent = 'Calculating score...';
+        document.getElementById('emailDetails').textContent = 'Waiting for analysis...';
     }
 });
 
-// Listen for updates from background script
+// Popup listens for updates while it's open
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'DATA_UPDATED') {
         updatePopupContent(message.data);
