@@ -10,6 +10,17 @@ const extractedEmails = new Map();
 // Create phishing detector instance
 const phishingDetector = new PhishingDetector();
 
+// Add this helper function at the top level
+function notifyPopup(message) {
+    chrome.runtime.sendMessage(message).catch(err => {
+        // Only ignore the specific error for closed popup
+        // This is an expected error when popup isn't open
+        if (err.message !== 'Could not establish connection. Receiving end does not exist.') {
+            console.error('Unexpected error when sending update to popup:', err);
+        }
+    });
+}
+
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Background script received message:', message.type);
@@ -46,15 +57,10 @@ async function handleMessage(message, sender) {
                     lastExtractedEmail = message.data;
                     extractedEmails.set(message.data.id, message.data);
 
-                    // Notify popup about the new data
-                    chrome.runtime.sendMessage({
+                    // Use the helper function instead
+                    notifyPopup({
                         type: 'DATA_UPDATED',
                         data: message.data
-                    }).catch(err => {
-                        // Ignore errors when popup is not open
-                        if (!err.message.includes('receiving end does not exist')) {
-                            console.error('Error sending update:', err);
-                        }
                     });
 
                     return { 
