@@ -1,12 +1,39 @@
+document.addEventListener('DOMContentLoaded', () => {
+    // Add click handlers for toggle and tooltip
+    document.querySelector('.toggle').addEventListener('click', toggleDetails);
+    document.querySelector('.help-icon').addEventListener('click', toggleTooltip);
+
+    const themeToggle = document.getElementById('themeToggle');
+    
+    // Set initial theme
+    document.documentElement.setAttribute('data-theme', 
+        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    );
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+    });
+
+    // Request initial AI status
+    chrome.runtime.sendMessage({ type: 'CHECK_AI_STATUS' }, response => {
+        if (response) {
+            updateAIStatus(response);
+            console.log('Response received by popup.js:', response);
+        }
+    });
+});
+
 // When popup opens, it immediately requests the latest data
 chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL_FOR_TAB' }, response => {
     if (response && response.data) {
         updatePopupContent(response.data);
     } else {
         // Show loading state
-        document.getElementById('MainSubject').textContent = 'Analyzing current email...';
-        document.getElementById('phishingScore').textContent = 'Calculating score...';
-        document.getElementById('emailDetails').textContent = 'Waiting for analysis...';
+        // document.getElementById('MainSubject').textContent = 'Analyzing current email...';
+        // document.getElementById('phishingScore').textContent = 'Calculating score...';
+        // document.getElementById('emailDetails').textContent = 'Waiting for analysis...';
     }
 });
 
@@ -14,6 +41,8 @@ chrome.runtime.sendMessage({ type: 'GET_LAST_EMAIL_FOR_TAB' }, response => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'DATA_UPDATED') {
         updatePopupContent(message.data);
+    } else if (message.type === 'AI_STATUS_UPDATED') {
+        updateAIStatus(message.status);
     }
 });
 
@@ -56,26 +85,6 @@ Body: ${emailData.body.mainText}
     }
 }
 
-// Add event listeners when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Add click handlers for toggle and tooltip
-    document.querySelector('.toggle').addEventListener('click', toggleDetails);
-    document.querySelector('.help-icon').addEventListener('click', toggleTooltip);
-
-    const themeToggle = document.getElementById('themeToggle');
-    
-    // Set initial theme
-    document.documentElement.setAttribute('data-theme', 
-        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    );
-
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', newTheme);
-    });
-});
-
 // Toggle details function
 function toggleDetails() {
     const details = document.getElementById('emailDetails');
@@ -97,4 +106,18 @@ function toggleDetails() {
 function toggleTooltip() {
     const tooltip = document.getElementById('tooltip');
     tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
+}
+
+function updateAIStatus(status) {
+    const statusDot = document.querySelector('.status-dot');
+    const statusText = document.getElementById('aiStatus');
+    
+    // Check if status is a capabilities object
+    if (status === "readily") {
+        statusDot.className = 'status-dot ready';
+        statusText.textContent = 'AI Model Ready';
+    } else {
+        statusDot.className = 'status-dot not-ready';
+        statusText.textContent = 'AI Model Not Available';
+    }
 } 

@@ -6,6 +6,7 @@ import { PhishingDetector } from './phishing.js';
 // Initialize variables
 let lastExtractedEmail = null;
 const extractedEmails = new Map();
+let aiStatus = null;
 
 // Create phishing detector instance
 const phishingDetector = new PhishingDetector();
@@ -33,6 +34,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     // Since we're using async/await, we need to handle the response differently
     handleMessage(message, sender).then(response => {
+        console.log('Sending response back to popup:', response);
         sendResponse(response);
     }).catch(error => {
         console.error('Error handling message:', error);
@@ -50,10 +52,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleMessage(message, sender) {
     try {
         switch (message.type) {
+            case 'CHECK_AI_STATUS':
+                try {
+                    console.log('Starting CHECK_AI_STATUS');
+                    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                    console.log('Found tab:', tab);
+                    
+                    if (!tab) {
+                        console.error('No active tab found');
+                        return { status: 'error', message: 'No active tab found' };
+                    }
+                    
+                    console.log('About to execute script');
+                    const result = await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        func: async () => {
+                            console.log('Inside executeScript');
+                            try {
+                                const capabilities = await ai.languageModel.capabilities();
+                                console.log('AI capabilities:', capabilities);
+                                return capabilities.available;
+                            } catch (err) {
+                                console.error('Error checking AI status:', err);
+                                return false;
+                            }
+                        }
+                    });
+                    
+                    console.log('Script execution result:', result);
+                    return result[0].result;
+                } catch (err) {
+                    console.error('Error in CHECK_AI_STATUS:', err);
+                    return false;
+                }
+
             case 'EMAIL_EXTRACTED':
                 if (message.data && message.data.id) {
                     console.log('Email data received:', message.data);
                     
+                    console.log('seconddd AI status:', (await ai.languageModel.capabilities()).available);
+                    // Check AI capabilities before calculating score
+                    const capabilities = await ai.languageModel.capabilities();
+                    if (capabilities.available !== "readily") {
+                        console.warn('Language model is not readily available');
+                        return;
+                    }
+
                     // Calculate phishing score
                     const phishingScore = await phishingDetector.calculateScore(message.data);
                     console.log('Calculated phishing score:', phishingScore);
