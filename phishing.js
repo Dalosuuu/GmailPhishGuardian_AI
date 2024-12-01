@@ -36,8 +36,19 @@ export class PhishingDetector {
 
       // Generate the prompt
       const prompt = `
-      Response should be only in English and Arabic numerals EXPLICITLY.
-Analyze this email for phishing indicators. Consider:
+      
+Instructions:
+- Considering the above information, assign a phishing likelihood score and provide a detailed explanation.
+- Use English and Arabic numerals.
+- Return the result in the format "The score is the following: X", where X is a number between 0 and 100.
+Analyze this email for phishing indicators and provide a response in the following format:
+
+The score is the following: X
+
+The explanation is: [Your detailed analysis here]
+End of explanation.
+
+Consider these factors:
 - Urgency or pressure tactics
 - Grammar and spelling errors
 - Suspicious links or attachments
@@ -55,13 +66,6 @@ ${emailContent.body.mainText}
 
 Detected suspicious features:
 ${features.join('\n')}
-
-Instructions:
-- Considering the above information, assign a phishing likelihood score.
-- Use English and Arabic numerals.
-- Do not include any additional text or explanation.
-- Return the result in the format "The score is the following: X", where X is a number between 0 and 100.
-
       `.trim();
 
       // Log the generated prompt
@@ -86,10 +90,14 @@ Instructions:
       if (scoreMatch) {
         const score = parseInt(scoreMatch[2], 10);
         if (!isNaN(score) && score >= 0 && score <= 100) {
-          return score;
-        } else {
-          console.error(`Invalid score value: ${score}`);
-          return 50; // Default score if parsing fails
+          // Modified regex to capture everything after "The explanation is:"
+          const explanationMatch = assistantMessage.match(/The explanation is:([\s\S]*$)/);
+          const explanation = explanationMatch ? explanationMatch[1].trim() : 'No explanation provided.';
+
+          return {
+            score: score,
+            explanation: explanation
+          };
         }
       } else {
         console.error("Score not found in assistant's response.");

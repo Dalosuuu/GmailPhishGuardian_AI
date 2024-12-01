@@ -3,3 +3,8 @@
 /.venv
 Built-in AI Early Preview Program - Welcome and heads-up about the Prompt API - Update #1.md
 .cursorignore
+
+
+# Temp files to hold for commit/push
+/readme_assets/
+README.md

@@ -90,7 +90,6 @@ async function handleMessage(message, sender) {
                 if (message.data && message.data.id) {
                     console.log('Email data received:', message.data);
                     
-                    console.log('seconddd AI status:', (await ai.languageModel.capabilities()).available);
                     // Check AI capabilities before calculating score
                     const capabilities = await ai.languageModel.capabilities();
                     if (capabilities.available !== "readily") {
@@ -99,24 +98,31 @@ async function handleMessage(message, sender) {
                     }
 
                     // Calculate phishing score
-                    const phishingScore = await phishingDetector.calculateScore(message.data);
-                    console.log('Calculated phishing score:', phishingScore);
+                    const phishingResult = await phishingDetector.calculateScore(message.data);
                     
-                    // Add phishing score to email data
-                    message.data.phishingScore = phishingScore;
-                    lastExtractedEmail = message.data;
-                    extractedEmails.set(message.data.id, message.data);
+                    // Create a new object to store the complete result
+                    const emailWithScore = {
+                        ...message.data,
+                        phishingScore: {
+                            score: phishingResult.score,
+                            explanation: phishingResult.explanation
+                        }
+                    };
+                    
+                    // Store the complete result
+                    lastExtractedEmail = emailWithScore;
+                    extractedEmails.set(emailWithScore.id, emailWithScore);
 
-                    // Use the helper function instead
+                    // Notify popup with complete data
                     notifyPopup({
                         type: 'DATA_UPDATED',
-                        data: message.data
+                        data: emailWithScore
                     });
 
                     return { 
                         status: 'received', 
                         success: true,
-                        emailId: message.data.id 
+                        emailId: emailWithScore.id 
                     };
                 }
                 throw new Error('Invalid email data');

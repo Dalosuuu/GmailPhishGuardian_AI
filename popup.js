@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Add click handlers for toggle and tooltip
-    document.querySelector('.toggle').addEventListener('click', toggleDetails);
+    // Click handlers for both toggles using specific selectors
+    document.querySelectorAll('.toggle')[1].addEventListener('click', toggleDetails); // Email Details (second toggle)
+    document.querySelectorAll('.toggle')[0].addEventListener('click', toggleExplanation); // Analysis (first toggle)
     document.querySelector('.help-icon').addEventListener('click', toggleTooltip);
 
     const themeToggle = document.getElementById('themeToggle');
@@ -49,16 +50,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Function to update popup content
 function updatePopupContent(emailData) {
     if (emailData) {
-        const phishingScore = emailData.phishingScore || 'N/A';
-
+        const phishingData = emailData.phishingScore || { score: 'N/A', explanation: 'No analysis available.' };
+        
         // Update the phishing score text
         const scoreElement = document.getElementById('phishingScore');
-        scoreElement.textContent = `Phishing Score: ${phishingScore}`;
+        scoreElement.textContent = `Phishing Score: ${phishingData.score}`;
+
+        // Update the explanation
+        const explanationElement = document.getElementById('scoreExplanation');
+        explanationElement.textContent = phishingData.explanation;
 
         // Determine severity and update the class
         scoreElement.className = 'score'; // Reset classes
-        if (phishingScore !== 'N/A') {
-            const score = parseInt(phishingScore);
+        if (phishingData.score !== 'N/A') {
+            const score = parseInt(phishingData.score);
             if (score < 30) {
                 scoreElement.classList.add('safe');
             } else if (score < 70) {
@@ -82,13 +87,14 @@ Body: ${emailData.body.mainText}
         `;
     } else {
         document.getElementById('emailDetails').textContent = 'No email data available.';
+        document.getElementById('scoreExplanation').textContent = 'No analysis available.';
     }
 }
 
-// Toggle details function
+// Toggle details function (updated to be more specific)
 function toggleDetails() {
     const details = document.getElementById('emailDetails');
-    const toggleText = document.querySelector('.toggle span');
+    const toggleText = document.querySelectorAll('.toggle')[1].querySelector('span');
     const toggleIcon = document.getElementById('toggleIcon');
     
     if (details.style.display === 'block' || details.style.display === '') {
@@ -120,4 +126,22 @@ function updateAIStatus(status) {
         statusDot.className = 'status-dot not-ready';
         statusText.textContent = 'AI Model Not Available';
     }
-} 
+}
+
+// Explanation toggle function (updated to be more specific)
+function toggleExplanation() {
+    const explanation = document.getElementById('scoreExplanation');
+    const toggleText = document.querySelectorAll('.toggle')[0].querySelector('span');
+    const toggleIcon = document.getElementById('explanationToggleIcon');
+    
+    if (explanation.style.display === 'none' || !explanation.style.display) {
+        explanation.style.display = 'block';
+        toggleText.textContent = 'Hide Analysis';
+        toggleIcon.style.transform = 'rotate(180deg)';
+    } else {
+        explanation.style.display = 'none';
+        toggleText.textContent = 'Show Analysis';
+        toggleIcon.style.transform = 'rotate(0deg)';
+    }
+}
+  
