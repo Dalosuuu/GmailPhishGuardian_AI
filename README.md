@@ -29,7 +29,7 @@ GmailPhishGuardian AI is a Chrome extension that leverages AI to analyze your Gm
 
 ## Installation
 
-1. Clone the repository: `git clone https://github.com/yourusername/gmail-phish-guardian.git`
+1. Clone the repository: `git clone https://github.com/Dalosuuu/GmailPhishGuardian_A.git`
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode" if it's not already enabled.
 4. Click on "Load unpacked" and select the cloned repository folder.
