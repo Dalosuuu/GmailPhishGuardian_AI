@@ -129,7 +129,7 @@ async function handleMessage(message, sender) {
                 
             case 'GET_LAST_EMAIL_FOR_TAB':
                 const currentUrl = await getCurrentTabUrl();
-                const urlMatch = currentUrl.match(/#(?:inbox\/)?(?:[^\/]+\/)?([a-zA-Z0-9]+)$/);
+                const urlMatch = currentUrl.match(/#(?:inbox\/|label\/[^\/]+\/)?([a-zA-Z0-9]+)$/);
                 const currentEmailId = urlMatch ? urlMatch[1] : null;
                 
                 console.log('Current URL:', currentUrl);

@@ -15,7 +15,7 @@ function cleanText(text) {
 
 // Helper function to get email ID from URL
 function getEmailId() {
-    const urlMatch = window.location.href.match(/#(?:inbox\/)?(?:[^\/]+\/)?([a-zA-Z0-9]+)$/);
+    const urlMatch = window.location.href.match(/#(?:inbox\/|label\/[^\/]+\/)?(?:[^\/]+\/)?([a-zA-Z0-9]+)$/);
     if (urlMatch) return urlMatch[1];
     return `email-${Date.now()}`;
 }
@@ -146,12 +146,14 @@ function initializeExtraction() {
     console.log('Initializing extraction...');
 
     const observer = new MutationObserver((mutations) => {
-        // Check if we're on an email view
-        if (window.location.href.includes('#inbox/') || window.location.href.includes('#sent/')) {
+        // Updated condition to check for label paths
+        if (window.location.href.includes('#inbox/') || 
+            window.location.href.includes('#sent/') || 
+            window.location.href.includes('#label/')) {
             const emailContainer = document.querySelector('.gs');
             if (emailContainer && !processedEmails.has(getEmailId())) {
                 console.log('Detected new email content, attempting extraction...');
-                setTimeout(extractEmailData, 500); // Small delay to ensure DOM is ready
+                setTimeout(extractEmailData, 500);
             }
         }
     });
@@ -161,8 +163,10 @@ function initializeExtraction() {
         subtree: true
     });
 
-    // Initial check in case we're already on an email
-    if (window.location.href.includes('#inbox/') || window.location.href.includes('#sent/')) {
+    // Update the initial check as well
+    if (window.location.href.includes('#inbox/') || 
+        window.location.href.includes('#sent/') || 
+        window.location.href.includes('#label/')) {
         setTimeout(extractEmailData, 1000);
     }
 
